@@ -98,6 +98,8 @@ def repo_create(path):
     else:
         os.makedirs(repo.worktree)
 
+    print(repo.worktree, repo.gitdir)
+
     assert repo_dir(repo, "branches", mkdir=True)
     assert repo_dir(repo, "objects", mkdir=True)
     assert repo_dir(repo, "refs", "tags", mkdir=True)
@@ -126,6 +128,17 @@ argparser = argparse.ArgumentParser(description="A simple Git-like version contr
 # Subparser is a parser in a parser, used to parse specific arguments within a perser. Allows us to enforce use of commands
 argsubparsers = argparser.add_subparsers(title="commands", dest="command", required=True) # Dest means that the arg is stored in a field called "command", accessible by args.command
 
+# Subparser for init, we add an optional argument for path to initialize repo in
+argsp = argsubparsers.add_parser("init", help="Initialize a new, empty repository.")
+argsp.add_argument("path",
+                   metavar="directory",
+                   nargs="?",
+                   default=".",
+                   help="Where to create the repository.")
+
+# BRIDGE FUNCTIONS
+def cmd_init(args):
+    repo_create(args.path)
 
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
