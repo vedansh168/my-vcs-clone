@@ -13,6 +13,7 @@ import re # Library to use regexes
 import sys # Library to access real CLI arguments
 import zlib # Git uses this for compression
 
+'''CLASSES'''
 class GitRepository(object):
     worktree = None # Worktree is the directory where files which live in the VCS are stored
     gitdir = None # Directory for metadata for git
@@ -42,6 +43,7 @@ class GitRepository(object):
             if vers != 0:
                 raise Exception(f"Unsupported repositoryformatversion: {vers}")
 
+'''UTILITY FUNCTIONS'''
 # Asterisk makes the function variadic, which means multiple args can be passed as path. Function receives a list
 def repo_path(repo, *path):
     """Compute path under repo's gitdir."""
@@ -120,9 +122,29 @@ def repo_create(path):
 
     return repo
 
+def repo_find(path=".", required=True):
+    path = os.path.realpath(path)
+    
+    if os.path.isdir(os.path.join(path, ".git")):
+        return GitRepository(path)
+
+    # If we haven't returned, recurse in parent, if w
+    parent = os.path.realpath(os.path.join(path, ".."))
+
+    if parent == path:
+        # Bottom case
+        # os.path.join("/", "..") == "/":
+        # If parent==path, then path is root.
+        if required:
+            raise Exception("No git directory.")
+        else:
+            return None
+
+    # Recursive case
+    return repo_find(parent, required)
 
             
-# MAIN - ARG PARSING AND DISPATCHING
+'''MAIN - ARG PARSING AND DISPATCHING'''
 argparser = argparse.ArgumentParser(description="A simple Git-like version control system.")
 
 # Subparser is a parser in a parser, used to parse specific arguments within a perser. Allows us to enforce use of commands
@@ -135,10 +157,6 @@ argsp.add_argument("path",
                    nargs="?",
                    default=".",
                    help="Where to create the repository.")
-
-# BRIDGE FUNCTIONS
-def cmd_init(args):
-    repo_create(args.path)
 
 def main(argv=sys.argv[1:]):
     args = argparser.parse_args(argv)
@@ -161,3 +179,7 @@ def main(argv=sys.argv[1:]):
         case "status"       : cmd_status(args)
         case "tag"          : cmd_tag(args)
         case _              : print("Bad command.")
+
+'''BRIDGE FUNCTIONS'''
+def cmd_init(args):
+    repo_create(args.path)
