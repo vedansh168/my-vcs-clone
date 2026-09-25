@@ -1,0 +1,14 @@
+digraph wyaglog{
+  node[shape=rect]
+  c_93de178545cf1f69a391c57709f339aef8da3761 [label="93de178: Feat: Implement init command which creates a wyag repository"]
+  c_93de178545cf1f69a391c57709f339aef8da3761 -> c_9df1498edfa5f23e84ae321d73826dd6580cb0f7;
+  c_9df1498edfa5f23e84ae321d73826dd6580cb0f7 [label="9df1498: Feat: Implement Repository object and utility functions to manage Repository"]
+  c_9df1498edfa5f23e84ae321d73826dd6580cb0f7 -> c_97a8487d4a5e1bcf148292c698f77fb919e2effd;
+  c_97a8487d4a5e1bcf148292c698f77fb919e2effd [label="97a8487: Feat: Implement main for wyag lib and argument parsing of CLI args"]
+  c_97a8487d4a5e1bcf148292c698f77fb919e2effd -> c_1b4c213533094364c4f4ed54737f1260f62ae058;
+  c_1b4c213533094364c4f4ed54737f1260f62ae058 [label="1b4c213: Feat: Add new files for git library and executable"]
+  c_1b4c213533094364c4f4ed54737f1260f62ae058 -> c_6ce052029c946300c36ae9de4f2a46df6a81bc7c;
+  c_6ce052029c946300c36ae9de4f2a46df6a81bc7c [label="6ce0520: CI: Add CI workflow for build and testing"]
+  c_6ce052029c946300c36ae9de4f2a46df6a81bc7c -> c_1875d27a8e0260a68783e0ee9e678b46f5c45e4a;
+  c_1875d27a8e0260a68783e0ee9e678b46f5c45e4a [label="1875d27: Docs: Set up coding stlye config file and update README with credits"]
+  c_1875d27a8e0260a68783e0ee9e678b46f5c45e4a -> c_6961eb55057c3e97288d111b5bf07da542fb6fec;
