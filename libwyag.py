@@ -79,14 +79,14 @@ class GitBlob(GitObject):
 class GitCommit(GitObject):
     fmt=b'commit'
 
-    def init(self):
-        self.kvlm = dict()
+    def deserialize(self, data):
+        self.kvlm = kvlm_parse(data)
 
     def serialize(self):
         return kvlm_serialize(self.kvlm)
 
-    def deserialize(self, data):
-        self.kvlm = kvlm_parse(data)
+    def init(self):
+        self.kvlm = dict()
 
 '''UTILITY FUNCTIONS'''
 # Asterisk makes the function variadic, which means multiple args can be passed as path. Function receives a list
@@ -189,8 +189,8 @@ def repo_find(path=".", required=True):
     return repo_find(parent, required)
 
 def object_read(repo, sha):
-    '''Read object sha from the Git repo. Return a GitObject
-    whose exact type depends on the object.'''
+    """Read object sha from Git repository repo.  Return a
+    GitObject whose exact type depends on the object."""
 
     path = repo_file(repo, "objects", sha[0:2], sha[2:])
 
@@ -209,7 +209,7 @@ def object_read(repo, sha):
         # Read and validate object size
         y = raw.find(b'\x00', x)
         size = int(raw[x:y].decode("ascii"))
-        if size != len(raw) - y - 1:
+        if size != len(raw)-y-1:
             raise Exception(f"Malformed object {sha}: bad length")
 
         # Pick constructor
@@ -218,28 +218,26 @@ def object_read(repo, sha):
             case b'tree'   : c=GitTree
             case b'tag'    : c=GitTag
             case b'blob'   : c=GitBlob
-            case _         :
+            case _:
                 raise Exception(f"Unknown type {fmt.decode('ascii')} for object {sha}")
         # Call constructor and return object
         return c(raw[y+1:])
 
 def object_write(obj, repo=None):
-    # Serialize object data 
+    # Serialize object data
     data = obj.serialize()
-
     # Add header
     result = obj.fmt + b' ' + str(len(data)).encode() + b'\x00' + data
-
     # Compute hash
     sha = hashlib.sha1(result).hexdigest()
 
     if repo:
-        # Compute hash
-        path = repo_file(repo, "objects", sha[0:2], sha[2:], mkdir=True)
+        # Compute path
+        path=repo_file(repo, "objects", sha[0:2], sha[2:], mkdir=True)
 
         if not os.path.exists(path):
             with open(path, 'wb') as f:
-                # compress and write
+                # Compress and write
                 f.write(zlib.compress(result))
     return sha
 
@@ -247,42 +245,42 @@ def object_find(repo, name, fmt=None, follow=True):
     return name
 
 def object_hash(fd, fmt, repo=None):
-    '''Hash object, writing it to repo if provided'''
-
+    """ Hash object, writing it to repo if provided."""
     data = fd.read()
 
+    # Choose constructor according to fmt argument
     match fmt:
-        case b'blob'   : obj=GitBlob(data)
         case b'commit' : obj=GitCommit(data)
         case b'tree'   : obj=GitTree(data)
         case b'tag'    : obj=GitTag(data)
-        case _         : raise Exception(f"Unknown type {fmt}!")
+        case b'blob'   : obj=GitBlob(data)
+        case _: raise Exception(f"Unknown type {fmt}!")
 
     return object_write(obj, repo)
 
 def kvlm_parse(raw, start=0, dct=None):
     if not dct:
         dct = dict()
-        # You CANNOT declare the argument as dct=dict() or all call 
-        # to the functions will endlessly grow the same dict.
+        # You CANNOT declare the argument as dct=dict() or all call to
+        # the functions will endlessly grow the same dict.
 
-    # This function is recursive: it reads a key-value pair, then call
-    # itself back with the new position. So we first need to know 
-    # where we are: at a keyword, or already in the message/
+    # This function is recursive: it reads a key/value pair, then call
+    # itself back with the new position.  So we first need to know
+    # where we are: at a keyword, or already in the message
 
-    # We search for the next space and the next newline
+    # We search for the next space and the next newline.
     spc = raw.find(b' ', start)
     nl = raw.find(b'\n', start)
 
-    # If space appears before newline, we have a keyword. Otherwise,
+    # If space appears before newline, we have a keyword.  Otherwise,
     # it's the final message, which we just read to the end of the file.
 
     # Base case
     # =========
     # If newline appears first (or there's no space at all, in which
-    # case find returns -1), we assume a blank line. A blank line
-    # means the remainder of the data is the message. We store it in the dictionary,
-    # with None as the key, and return.
+    # case find returns -1), we assume a blank line.  A blank line
+    # means the remainder of the data is the message.  We store it in
+    # the dictionary, with None as the key, and return.
     if (spc < 0) or (nl < spc):
         assert nl == start
         dct[None] = raw[start+1:]
@@ -290,12 +288,11 @@ def kvlm_parse(raw, start=0, dct=None):
 
     # Recursive case
     # ==============
-    # We read a key-value pair and recurse for the next.
+    # we read a key-value pair and recurse for the next.
     key = raw[start:spc]
 
-    # Find the end of the value. Continuation lines begin with a space, so we loop until we find a "\n" 
-    # not followed by a space. 
-
+    # Find the end of the value.  Continuation lines begin with a
+    # space, so we loop until we find a "\n" not followed by a space.
     end = start
     while True:
         end = raw.find(b'\n', end+1)
@@ -303,16 +300,16 @@ def kvlm_parse(raw, start=0, dct=None):
 
     # Grab the value
     # Also, drop the leading space on continuation lines
-    value = raw[spc+1: end].replace(b'\n ', b'\n')
+    value = raw[spc+1:end].replace(b'\n ', b'\n')
 
-    # Don't overwrite the existing data contents
+    # Don't overwrite existing data contents
     if key in dct:
         if type(dct[key]) == list:
             dct[key].append(value)
         else:
-            dct[key] = [ dct[key], value]
+            dct[key] = [ dct[key], value ]
     else:
-        dct[key] = value
+        dct[key]=value
 
     return kvlm_parse(raw, start=end+1, dct=dct)
 
@@ -331,10 +328,10 @@ def kvlm_serialize(kvlm):
         for v in val:
             ret += k + b' ' + (v.replace(b'\n', b'\n ')) + b'\n'
 
-        # Append message
-        ret += b'\n' + kvlm[None]
+    # Append message
+    ret += b'\n' + kvlm[None]
 
-        return ret
+    return ret
 
 def log_graphviz(repo, sha, seen):
     if sha in seen:
@@ -353,7 +350,7 @@ def log_graphviz(repo, sha, seen):
     assert commit.fmt==b'commit'
 
     if not b'parent' in commit.kvlm.keys():
-        # Base case: the initial commit
+        # Base case: the initial commit.
         return
 
     parents = commit.kvlm[b'parent']
@@ -381,7 +378,7 @@ argsp.add_argument("path",
                    help="Where to create the repository.")
 
 argsp = argsubparsers.add_parser("cat-file",
-                                 help="Provide content of repository object")
+                                 help="Provide content of repository objects")
 
 argsp.add_argument("type",
                    metavar="type",
@@ -393,8 +390,9 @@ argsp.add_argument("object",
                    help="The object to display")
 
 
-argsp = argsubparsers.add_parser("hash-object",
-                                 help="Compute object ID and optionally creates a blob from a file")
+argsp = argsubparsers.add_parser(
+    "hash-object",
+    help="Compute object ID and optionally creates a blob from a file")
 
 argsp.add_argument("-t",
                    metavar="type",
@@ -411,9 +409,7 @@ argsp.add_argument("-w",
 argsp.add_argument("path",
                    help="Read object from <file>")
 
-argsp = argsubparsers.add_parser("log", 
-                                 help="Display history of a given commit")
-
+argsp = argsubparsers.add_parser("log", help="Display history of a given commit.")
 argsp.add_argument("commit",
                    default="HEAD",
                    nargs="?",
